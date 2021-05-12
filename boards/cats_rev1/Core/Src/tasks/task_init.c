@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#define ARMING_ON_TIME 5000 // in ms
 /** Task Definitions **/
 
 /* Definitions for task_baro_read */
@@ -243,7 +244,7 @@ _Noreturn void task_init(void *argument) {
   osDelay(100);
 
   create_event_map();
-  init_timers();
+  //init_timers();
 
   init_tasks();
   log_info("Task initialization complete.");
@@ -260,9 +261,21 @@ _Noreturn void task_init(void *argument) {
   osDelay(100);
   battery_monitor_init();
   buzzer_queue_status(CATS_BUZZ_BOOTUP);
-
+  uint32_t timer = 0;
   /* Infinite loop */
   for (;;) {
+    if(HAL_GPIO_ReadPin(GPIO_1_GPIO_Port, GPIO_1_Pin) == 0){
+      timer = osKernelGetTickCount();
+    }
+    if ((timer + ARMING_ON_TIME) > osKernelGetTickCount()){
+      HAL_GPIO_WritePin(PYRO_1_GPIO_Port, PYRO_1_Pin, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(PYRO_2_GPIO_Port, PYRO_2_Pin, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(PYRO_3_GPIO_Port, PYRO_3_Pin, GPIO_PIN_SET);
+    } else {
+      HAL_GPIO_WritePin(PYRO_1_GPIO_Port, PYRO_1_Pin, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(PYRO_2_GPIO_Port, PYRO_2_Pin, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(PYRO_3_GPIO_Port, PYRO_3_Pin, GPIO_PIN_RESET);
+    }
     osDelay(10);
   }
   /* USER CODE END 5 */
@@ -351,7 +364,7 @@ static void init_communication() {
    */
 
   //#define AUTO_USB_CONFIG
-  #define SLOW_USB_CONFIG
+  //#define SLOW_USB_CONFIG
 
 #ifdef AUTO_USB_CONFIG
   if (global_usb_detection) {
@@ -445,7 +458,7 @@ static void init_tasks() {
         osThreadNew(task_state_est, NULL, &task_state_est_attributes);
 
         /* creation of task_health_monitor */
-        osThreadNew(task_health_monitor, NULL, &task_health_monitor_attributes);
+        //osThreadNew(task_health_monitor, NULL, &task_health_monitor_attributes);
       } break;
       case CATS_CONFIG:
         /* creation of task_flash_reader */
@@ -506,46 +519,46 @@ static void create_event_map() {
   /* TODO: where to free this? */
   event_output_map = calloc(9, sizeof(event_output_map_elem_t));
 
-  event_output_map[EV_IDLE].num_outputs = 1;
-  event_output_map[EV_IDLE].output_list = calloc(1, sizeof(peripheral_out_t));
-  event_output_map[EV_IDLE].output_list[0].func_ptr = output_table[RECORDER_STATE];
-  event_output_map[EV_IDLE].output_list[0].func_arg = REC_FILL_QUEUE;
-  event_output_map[EV_IDLE].output_list[0].delay_ms = 0;
-
-  // Liftoff
-  event_output_map[EV_LIFTOFF].num_outputs = 1;
-  event_output_map[EV_LIFTOFF].output_list = calloc(1, sizeof(peripheral_out_t));
-  event_output_map[EV_LIFTOFF].output_list[0].func_ptr = output_table[RECORDER_STATE];
-  event_output_map[EV_LIFTOFF].output_list[0].func_arg = REC_WRITE_TO_FLASH;
-  event_output_map[EV_LIFTOFF].output_list[0].delay_ms = 0;
-
-  // Apogee / Drogue
-  event_output_map[EV_APOGEE].num_outputs = 1;
-  event_output_map[EV_APOGEE].output_list = calloc(1, sizeof(peripheral_out_t));
-  event_output_map[EV_APOGEE].output_list[0].func_ptr = output_table[OUT_HIGH_CURRENT_ONE];
-  event_output_map[EV_APOGEE].output_list[0].func_arg = 1;
-  event_output_map[EV_APOGEE].output_list[0].delay_ms = 0;
-
-  // Low Altitude / Main
-  event_output_map[EV_POST_APOGEE].num_outputs = 1;
-  event_output_map[EV_POST_APOGEE].output_list = calloc(1, sizeof(peripheral_out_t));
-  event_output_map[EV_POST_APOGEE].output_list[0].func_ptr = output_table[OUT_HIGH_CURRENT_TWO];
-  event_output_map[EV_POST_APOGEE].output_list[0].func_arg = 1;
-  event_output_map[EV_POST_APOGEE].output_list[0].delay_ms = 0;
-
-  // Timer 1 / Drogue
-  event_output_map[EV_TIMER_1].num_outputs = 1;
-  event_output_map[EV_TIMER_1].output_list = calloc(1, sizeof(peripheral_out_t));
-  event_output_map[EV_TIMER_1].output_list[0].func_ptr = output_table[OUT_HIGH_CURRENT_ONE];
-  event_output_map[EV_TIMER_1].output_list[0].func_arg = 1;
-  event_output_map[EV_TIMER_1].output_list[0].delay_ms = 0;
-
-  // Timer 2 / Main
-  event_output_map[EV_TIMER_2].num_outputs = 1;
-  event_output_map[EV_TIMER_2].output_list = calloc(1, sizeof(peripheral_out_t));
-  event_output_map[EV_TIMER_2].output_list[0].func_ptr = output_table[OUT_HIGH_CURRENT_TWO];
-  event_output_map[EV_TIMER_2].output_list[0].func_arg = 1;
-  event_output_map[EV_TIMER_2].output_list[0].delay_ms = 0;
+//  event_output_map[EV_IDLE].num_outputs = 1;
+//  event_output_map[EV_IDLE].output_list = calloc(1, sizeof(peripheral_out_t));
+//  event_output_map[EV_IDLE].output_list[0].func_ptr = output_table[RECORDER_STATE];
+//  event_output_map[EV_IDLE].output_list[0].func_arg = REC_FILL_QUEUE;
+//  event_output_map[EV_IDLE].output_list[0].delay_ms = 0;
+//
+//  // Liftoff
+//  event_output_map[EV_LIFTOFF].num_outputs = 1;
+//  event_output_map[EV_LIFTOFF].output_list = calloc(1, sizeof(peripheral_out_t));
+//  event_output_map[EV_LIFTOFF].output_list[0].func_ptr = output_table[RECORDER_STATE];
+//  event_output_map[EV_LIFTOFF].output_list[0].func_arg = REC_WRITE_TO_FLASH;
+//  event_output_map[EV_LIFTOFF].output_list[0].delay_ms = 0;
+//
+//  // Apogee / Drogue
+//  event_output_map[EV_APOGEE].num_outputs = 1;
+//  event_output_map[EV_APOGEE].output_list = calloc(1, sizeof(peripheral_out_t));
+//  event_output_map[EV_APOGEE].output_list[0].func_ptr = output_table[OUT_HIGH_CURRENT_ONE];
+//  event_output_map[EV_APOGEE].output_list[0].func_arg = 1;
+//  event_output_map[EV_APOGEE].output_list[0].delay_ms = 0;
+//
+//  // Low Altitude / Main
+//  event_output_map[EV_POST_APOGEE].num_outputs = 1;
+//  event_output_map[EV_POST_APOGEE].output_list = calloc(1, sizeof(peripheral_out_t));
+//  event_output_map[EV_POST_APOGEE].output_list[0].func_ptr = output_table[OUT_HIGH_CURRENT_TWO];
+//  event_output_map[EV_POST_APOGEE].output_list[0].func_arg = 1;
+//  event_output_map[EV_POST_APOGEE].output_list[0].delay_ms = 0;
+//
+//  // Timer 1 / Drogue
+//  event_output_map[EV_TIMER_1].num_outputs = 1;
+//  event_output_map[EV_TIMER_1].output_list = calloc(1, sizeof(peripheral_out_t));
+//  event_output_map[EV_TIMER_1].output_list[0].func_ptr = output_table[OUT_HIGH_CURRENT_ONE];
+//  event_output_map[EV_TIMER_1].output_list[0].func_arg = 1;
+//  event_output_map[EV_TIMER_1].output_list[0].delay_ms = 0;
+//
+//  // Timer 2 / Main
+//  event_output_map[EV_TIMER_2].num_outputs = 1;
+//  event_output_map[EV_TIMER_2].output_list = calloc(1, sizeof(peripheral_out_t));
+//  event_output_map[EV_TIMER_2].output_list[0].func_ptr = output_table[OUT_HIGH_CURRENT_TWO];
+//  event_output_map[EV_TIMER_2].output_list[0].func_arg = 1;
+//  event_output_map[EV_TIMER_2].output_list[0].delay_ms = 0;
   /* ................ */
 }
 
