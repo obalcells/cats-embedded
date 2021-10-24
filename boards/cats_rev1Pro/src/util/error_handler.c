@@ -70,4 +70,15 @@ cats_error_e get_error_by_priority(uint32_t id){
   return CATS_ERR_OK;
 }
 
+cats_error_e get_error_by_tag(cats_error_e err){
+    if((errors & err) != 0){
+        return err;
+    }
+    else
+    {
+        return CATS_ERR_OK;
+    }
+
+}
+
 

@@ -35,8 +35,10 @@ typedef enum {
   CATS_ERR_BARO_0 = 0x200,
   CATS_ERR_BARO_1 = 0x400,
   CATS_ERR_BARO_2 = 0x800,
-  CATS_ERR_FILTER = 0x1000,
-  CATS_ERR_HARD_FAULT = 0x2000,
+  CATS_ERR_FILTER_ACC = 0x1000,
+  CATS_ERR_FILTER_HEIGHT = 0x2000,
+  CATS_ERR_SENSOR = 0x4000,
+  CATS_ERR_HARD_FAULT = 0x8000,
   CATS_ERR_HEHE = 0xFFFFFFFF /* TODO <- optimize these enums and remove this guy */
 } cats_error_e;
 
@@ -44,3 +46,4 @@ void add_error(cats_error_e err);
 void clear_error(cats_error_e err);
 uint32_t get_error_count();
 cats_error_e get_error_by_priority(uint32_t id);
+cats_error_e get_error_by_tag(cats_error_e err);
