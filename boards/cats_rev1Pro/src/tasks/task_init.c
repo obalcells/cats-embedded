@@ -23,7 +23,7 @@
 #include "drivers/adc.h"
 #include "drivers/spi.h"
 #include "eeprom_emul.h"
-#include "util/battery.h"
+#include "util/battery_monitor.h"
 #include "util/buzzer_handler.h"
 #include "util/actions.h"
 #include "tasks/task_baro_read.h"

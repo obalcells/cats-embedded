@@ -25,7 +25,7 @@
 #include "config/cats_config.h"
 #include "config/globals.h"
 #include "util/actions.h"
-#include "util/battery.h"
+#include "util/battery_monitor.h"
 #include "flash/fs.h"
 
 #include <stdlib.h>

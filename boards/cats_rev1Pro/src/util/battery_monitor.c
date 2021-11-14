@@ -17,8 +17,7 @@
  */
 
 #include "drivers/adc.h"
-#include "util/battery.h"
-
+#include "util/battery_monitor.h"
 
 #define ADC_LINFIT_A 0.00818474f
 #define ADC_LINFIT_B 0.476469f
@@ -58,13 +57,10 @@ float battery_voltage() {
   return (float)adc_get(ADC_BATTERY) * ADC_LINFIT_A + ADC_LINFIT_B;
 }
 
-float battery_cell_voltage() {
-  return ((float)adc_get(ADC_BATTERY) * ADC_LINFIT_A + ADC_LINFIT_B) / (float)cell_count;
-}
+float battery_cell_voltage() { return ((float)adc_get(ADC_BATTERY) * ADC_LINFIT_A + ADC_LINFIT_B) / (float)cell_count; }
 
 battery_level_e battery_level() {
-  float voltage;
-  voltage = battery_cell_voltage();
+  float voltage = battery_cell_voltage();
 
   if (voltage <= voltage_lookup[battery_type][0]) return BATTERY_CRIT;
   if (voltage <= voltage_lookup[battery_type][1]) return BATTERY_LOW;

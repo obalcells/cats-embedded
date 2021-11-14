@@ -19,7 +19,7 @@
 #include "cmsis_os.h"
 #include "tasks/task_health_monitor.h"
 #include "config/globals.h"
-#include "util/battery.h"
+#include "util/battery_monitor.h"
 #include "util/buzzer_handler.h"
 #include "config/cats_config.h"
 #include "util/actions.h"
