@@ -20,15 +20,10 @@
 
 #include "lfs.h"
 
-/* TODO: Wrap lfs functions where you always pass this lfs variable instead of making it visible globally */
-extern lfs_t lfs;
-extern const struct lfs_config lfs_cfg;
-
+extern uint32_t flight_counter;
 extern lfs_file_t fc_file;
 
 extern char cwd[256];
-
-extern uint32_t flight_counter;
 
 /**
  * List the contents of the directory
@@ -37,3 +32,22 @@ extern uint32_t flight_counter;
  * @return 0 if no error
  */
 int lfs_ls(const char *path);
+int lfs_rm(const char *path);
+
+int fs_format();
+int fs_mount();
+
+int fs_mkdir(const char *path);
+
+int file_open(lfs_file_t *file, const char *path, int flags);
+int file_rewind(lfs_file_t *file);
+int file_close(lfs_file_t *fh);
+int file_sync(lfs_file_t *file);
+int file_rewind(lfs_file_t *file);
+lfs_ssize_t file_read(lfs_file_t *file, void *buffer, lfs_size_t size);
+lfs_ssize_t file_write(lfs_file_t *file, const void *buffer, lfs_size_t size);
+lfs_soff_t file_size(lfs_file_t *file);
+
+void fs_create_default_dirs();
+
+void init_lfs();

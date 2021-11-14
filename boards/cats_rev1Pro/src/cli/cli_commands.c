@@ -21,12 +21,12 @@
 #include "cli/cli.h"
 #include "cli/cli_commands.h"
 #include "util/log.h"
-#include "util/reader.h"
+#include "flash/reader.h"
 #include "config/cats_config.h"
 #include "config/globals.h"
 #include "util/actions.h"
 #include "util/battery.h"
-#include "lfs/lfs_custom.h"
+#include "flash/fs.h"
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -381,33 +381,7 @@ static void cli_cmd_cd(const char *cmd_name, char *args) {
 
 static void cli_cmd_rm(const char *cmd_name, char *args) {
   if (args != NULL) {
-    if (strlen(args) > LFS_NAME_MAX) {
-      cli_print_line("File cmd_name too long!");
-      return;
-    }
-    /* first +1 for the path separator (/), second +1 for the null terminator */
-    char *full_path = malloc(strlen(cwd) + 1 + strlen(args) + 1);
-    strcpy(full_path, cwd);
-    strcat(full_path, "/");
-    strcat(full_path, args);
-    struct lfs_info info;
-    int32_t stat_err = lfs_stat(&lfs, full_path, &info);
-    if (stat_err < 0) {
-      cli_print_linef("lfs_stat failed with %ld", stat_err);
-      free(full_path);
-      return;
-    }
-    if (info.type != LFS_TYPE_REG) {
-      cli_print_line("This is not a file!");
-      free(full_path);
-      return;
-    }
-    int32_t rm_err = lfs_remove(&lfs, full_path);
-    if (rm_err < 0) {
-      cli_print_linef("File removal failed with %ld", rm_err);
-    }
-    cli_printf("File %s removed!", args);
-    free(full_path);
+    lfs_rm(args);
   } else {
     cli_print_line("Argument not provided!");
   }
@@ -471,15 +445,14 @@ static void cli_cmd_parse_stats(const char *cmd_name, char *args) {
 
 static void cli_cmd_lfs_format(const char *cmd_name, char *args) {
   cli_print_line("\nTrying LFS format");
-  lfs_format(&lfs, &lfs_cfg);
-  int err = lfs_mount(&lfs, &lfs_cfg);
+  fs_format();
+  int err = fs_mount();
   if (err != 0) {
     cli_print_linef("LFS mounting failed with error %d!", err);
   } else {
     cli_print_line("Mounting successful!");
-    /* create the flights directory */
-    lfs_mkdir(&lfs, "flights");
-    lfs_mkdir(&lfs, "stats");
+
+    fs_create_default_dirs();
 
     strncpy(cwd, "/", sizeof(cwd));
   }
@@ -491,14 +464,14 @@ static void cli_cmd_erase_flash(const char *cmd_name, char *args) {
   cli_print_line("Flash erased!");
   cli_print_line("Mounting LFS");
 
-  int err = lfs_mount(&lfs, &lfs_cfg);
+  int err = fs_mount();
   if (err == 0) {
     cli_print_line("LFS mounted successfully!");
   } else {
     cli_print_linef("LFS mounting failed with error %d!", err);
     cli_print_line("Trying LFS format");
-    lfs_format(&lfs, &lfs_cfg);
-    int err2 = lfs_mount(&lfs, &lfs_cfg);
+    fs_format();
+    int err2 = fs_mount();
     if (err2 != 0) {
       cli_print_linef("LFS mounting failed again with error %d!", err2);
       return;
@@ -507,9 +480,8 @@ static void cli_cmd_erase_flash(const char *cmd_name, char *args) {
     }
   }
   flight_counter = 0;
-  /* create the flights directory */
-  lfs_mkdir(&lfs, "flights");
-  lfs_mkdir(&lfs, "stats");
+
+  fs_create_default_dirs();
 
   strncpy(cwd, "/", sizeof(cwd));
 }

@@ -19,7 +19,7 @@
 #include "sensors/ms5607.h"
 #include "tasks/task_baro_read.h"
 #include "util/log.h"
-#include "util/recorder.h"
+#include "flash/recorder.h"
 #include "config/globals.h"
 
 /** Private Constants **/

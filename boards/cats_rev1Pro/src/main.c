@@ -26,7 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include "util/types.h"
 #include "util/log.h"
-#include "util/recorder.h"
+#include "flash/recorder.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/

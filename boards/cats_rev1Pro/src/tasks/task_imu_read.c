@@ -21,7 +21,7 @@
 #include "sensors/icm20601.h"
 #include "sensors/mmc5983ma.h"
 #include "sensors/h3lis100dl.h"
-#include "util/recorder.h"
+#include "flash/recorder.h"
 #include "config/globals.h"
 #include "util/log.h"
 

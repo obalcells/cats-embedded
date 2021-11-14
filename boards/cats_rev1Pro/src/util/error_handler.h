@@ -20,7 +20,6 @@
 
 #include <stdint.h>
 
-
 typedef enum {
   CATS_ERR_OK = 0,
   CATS_ERR_NO_CONFIG = 0x01,

@@ -38,7 +38,7 @@
 #include "tasks/task_receiver.h"
 #include "tasks/task_health_monitor.h"
 #include "lfs.h"
-#include "lfs/lfs_custom.h"
+#include "flash/fs.h"
 #include "util/fifo.h"
 #include "main.h"
 #include "cmsis_os.h"
@@ -81,7 +81,7 @@ static void init_system();
 
 static void init_devices();
 
-static void init_lfs();
+static void init_fs();
 
 static void init_communication();
 
@@ -136,7 +136,7 @@ _Noreturn void task_init(__attribute__((unused)) void *argument) {
 
   osDelay(100);
 
-  init_lfs();
+  init_fs();
 
   adc_init();
   osDelay(100);
@@ -194,41 +194,8 @@ static void init_devices() {
   w25q_init();
 }
 
-static void init_lfs() {
-  /* mount the filesystem */
-  int err = lfs_mount(&lfs, &lfs_cfg);
-  if (err == 0) {
-    log_raw("LFS mounted successfully!");
-  } else {
-    /* reformat if we can't mount the filesystem */
-    /* this should only happen on the first boot */
-    log_raw("LFS mounting failed with error %d!", err);
-    log_raw("Trying LFS format");
-    lfs_format(&lfs, &lfs_cfg);
-    int err2 = lfs_mount(&lfs, &lfs_cfg);
-    if (err2 != 0) {
-      log_raw("LFS mounting failed again with error %d!", err2);
-    }
-  }
-
-  lfs_file_open(&lfs, &fc_file, "flight_counter", LFS_O_RDWR | LFS_O_CREAT);
-
-  /* read how many flights we have */
-  if (lfs_file_read(&lfs, &fc_file, &flight_counter, sizeof(flight_counter)) > 0) {
-    log_debug("Flights found: %lu", flight_counter);
-  } else {
-    log_debug("Flights found: %lu", flight_counter);
-    lfs_file_rewind(&lfs, &fc_file);
-    lfs_file_write(&lfs, &fc_file, &flight_counter, sizeof(flight_counter));
-  }
-  lfs_file_close(&lfs, &fc_file);
-
-  /* TODO: create a single function for this, it's used in multiple places */
-  /* create the flights directory */
-  lfs_mkdir(&lfs, "flights");
-  lfs_mkdir(&lfs, "stats");
-
-  strncpy(cwd, "/", sizeof(cwd));
+static void init_fs() {
+  init_lfs();
 }
 
 static void init_communication() {

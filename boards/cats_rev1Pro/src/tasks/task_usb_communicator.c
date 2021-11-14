@@ -21,7 +21,7 @@
 #include "config/cats_config.h"
 #include "config/globals.h"
 #include "tasks/task_usb_communicator.h"
-#include "util/reader.h"
+#include "flash/reader.h"
 
 #include <stdint.h>
 

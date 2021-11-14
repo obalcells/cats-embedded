@@ -20,8 +20,8 @@
 #include "tasks/task_recorder.h"
 #include "util/log.h"
 #include "util/types.h"
-#include "lfs/lfs_custom.h"
-#include "util/recorder.h"
+#include "flash/fs.h"
+#include "flash/recorder.h"
 #include "config/cats_config.h"
 
 #include <stdlib.h>
@@ -102,17 +102,17 @@ _Noreturn void task_recorder(__attribute__((unused)) void *argument) {
       case REC_CMD_WRITE: {
         /* increment number of flights */
         ++flight_counter;
-        lfs_file_open(&lfs, &fc_file, "flight_counter", LFS_O_RDWR | LFS_O_CREAT);
-        lfs_file_rewind(&lfs, &fc_file);
-        lfs_file_write(&lfs, &fc_file, &flight_counter, sizeof(flight_counter));
-        lfs_file_close(&lfs, &fc_file);
+        file_open(&fc_file, "flight_counter", LFS_O_RDWR | LFS_O_CREAT);
+        file_rewind(&fc_file);
+        file_write(&fc_file, &flight_counter, sizeof(flight_counter));
+        file_close(&fc_file);
 
         /* reset flight stats */
         reset_global_flight_stats();
 
         /* open a new file */
         snprintf(current_flight_filename, MAX_FILENAME_SIZE, "flights/flight_%05lu", flight_counter);
-        lfs_file_open(&lfs, &current_flight_file, current_flight_filename, LFS_O_WRONLY | LFS_O_CREAT);
+        file_open(&current_flight_file, current_flight_filename, LFS_O_WRONLY | LFS_O_CREAT);
         rec_elem_t curr_log_elem;
         uint32_t sync_counter = 0;
         log_info("Started writing to flash");
@@ -135,12 +135,12 @@ _Noreturn void task_recorder(__attribute__((unused)) void *argument) {
           }
           // log_info("lfw start");
           // trace_print(flash_channel, "lfw start");
-          int32_t sz = lfs_file_write(&lfs, &current_flight_file, rec_buffer, (lfs_size_t)REC_BUFFER_LEN);
+          int32_t sz = file_write(&current_flight_file, rec_buffer, (lfs_size_t)REC_BUFFER_LEN);
           // trace_printf(flash_channel, "lfw end, written %ld", sz);
           ++sync_counter;
           /* Check for a new command */
           if ((sync_counter % 32) == 0) {
-            lfs_file_sync(&lfs, &current_flight_file);
+            file_sync(&current_flight_file);
           }
           // log_info("lfw synced");
           // log_info("written to file: %ld", sz);
@@ -166,7 +166,7 @@ _Noreturn void task_recorder(__attribute__((unused)) void *argument) {
       case REC_CMD_WRITE_STOP: {
         log_info("Stopped writing to flash");
         /* close the current file */
-        lfs_file_close(&lfs, &current_flight_file);
+        file_close(&current_flight_file);
 
         /* reset recording buffer index and queue */
         rec_buffer_idx = 0;
@@ -247,10 +247,10 @@ static void create_stats_file() {
   char current_stats_filename[MAX_FILENAME_SIZE] = {};
 
   snprintf(current_stats_filename, MAX_FILENAME_SIZE, "stats/stats_%05lu", flight_counter);
-  lfs_file_open(&lfs, &current_stats_file, current_stats_filename, LFS_O_WRONLY | LFS_O_CREAT);
+  file_open(&current_stats_file, current_stats_filename, LFS_O_WRONLY | LFS_O_CREAT);
 
   /* This will as long as there are no pointers in the global_flight_stats struct */
-  lfs_file_write(&lfs, &current_stats_file, &global_flight_stats, sizeof(global_flight_stats));
+  file_write(&current_stats_file, &global_flight_stats, sizeof(global_flight_stats));
 
-  lfs_file_close(&lfs, &current_stats_file);
+  file_close(&current_stats_file);
 }
