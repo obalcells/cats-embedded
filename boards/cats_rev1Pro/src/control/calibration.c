@@ -20,16 +20,16 @@
 #include "util/log.h"
 #include "stdlib.h"
 
-void calibrate_imu(accel_t *accel_data, calibration_data_t *calibration) {
+void calibrate_imu(vec_t *accel_data, calibration_data_t *calibration) {
   /* first get the largest vector */
-  if (fabsf(accel_data->acc_x) >= fabsf(accel_data->acc_y)) {
-    if (fabsf(accel_data->acc_x) >= fabsf(accel_data->acc_z)) {
+  if (fabsf(accel_data->x) >= fabsf(accel_data->y)) {
+    if (fabsf(accel_data->x) >= fabsf(accel_data->z)) {
       calibration->axis = 0;
     } else {
       calibration->axis = 2;
     }
   } else {
-    if (fabsf(accel_data->acc_y) >= fabsf(accel_data->acc_z)) {
+    if (fabsf(accel_data->y) >= fabsf(accel_data->z)) {
       calibration->axis = 1;
     } else {
       calibration->axis = 2;
@@ -40,15 +40,15 @@ void calibrate_imu(accel_t *accel_data, calibration_data_t *calibration) {
    * further use */
   switch (calibration->axis) {
     case 0:
-      calibration->angle = accel_data->acc_x / GRAVITY;
+      calibration->angle = accel_data->x / GRAVITY;
       log_info("Calibration chose X Axis with invcos(alpha)*1000 = %ld", (int32_t)(1000 * calibration->angle));
       break;
     case 1:
-        calibration->angle = accel_data->acc_y / GRAVITY;
+        calibration->angle = accel_data->y / GRAVITY;
       log_info("Calibration chose Y Axis with invcos(alpha)*1000 = %ld", (int32_t)(1000 * calibration->angle));
       break;
     case 2:
-        calibration->angle = accel_data->acc_z / GRAVITY;
+        calibration->angle = accel_data->z / GRAVITY;
       log_info("Calibration chose Z Axis with invcos(alpha)*1000 = %ld", (int32_t)(1000 * calibration->angle));
       break;
     default:

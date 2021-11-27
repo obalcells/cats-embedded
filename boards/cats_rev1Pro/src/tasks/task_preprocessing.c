@@ -12,7 +12,7 @@
 /** Private Constants **/
 
 /** Private Function Declarations **/
-static void avg_and_to_SI(SI_data_t *SI_data, sensor_elimination_t *elimination_data);
+static void avg_and_to_SI(SI_data_t *SI_data, SI_data_t *SI_data_old, sensor_elimination_t *elimination_data);
 static void median_filter(median_filter_t *filter_data, state_estimation_input_t *state_data);
 static void transform_data(float32_t pressure_0, state_estimation_input_t *state_data, SI_data_t *SI_data,
                            calibration_data_t *calibration);
@@ -29,6 +29,7 @@ void task_preprocessing(void *argument) {
 
     /* Create data structs */
     SI_data_t SI_data = {0};
+    SI_data_t SI_data_old = {0};
 #ifdef USE_MEDIAN_FILTER
     median_filter_t filter_data = {0};
 #endif
@@ -54,20 +55,18 @@ void task_preprocessing(void *argument) {
 
         /* Do the sensor elimination */
         check_sensors(&sensor_elimination);
-        global_elimination_data = sensor_elimination;
 
         /* average and construct SI Data */
         /* if a zero is inside the SI_data, this means that all sensors corresponding to that unit were eliminated. */
-        avg_and_to_SI(&SI_data, &sensor_elimination);
+        avg_and_to_SI(&SI_data, &SI_data_old, &sensor_elimination);
 
         /* Global SI data is only used in the fsm task */
-        /* Todo: What happens if all accels are eliminated? */
         global_SI_data = SI_data;
 
         /* Compute gravity when changing to IDLE */
         if ((new_fsm_enum == READY) && (new_fsm_enum != old_fsm_enum)) {
             calibrate_imu(&SI_data.accel, &calibration);
-            pressure_0 = SI_data.pressure.pressure;
+            pressure_0 = SI_data.pressure.v;
         }
 
         /* Get Sensor Readings already transformed in the right coordinate Frame */
@@ -80,6 +79,7 @@ void task_preprocessing(void *argument) {
 
         /* reset old fsm enum */
         old_fsm_enum = new_fsm_enum;
+        SI_data_old = SI_data;
 
         /* write input data into global struct */
         global_estimation_input = state_est_input;
@@ -88,56 +88,59 @@ void task_preprocessing(void *argument) {
     }
 }
 
-static void avg_and_to_SI(SI_data_t *SI_data, sensor_elimination_t *elimination_data){
+static void avg_and_to_SI(SI_data_t *SI_data, SI_data_t *SI_data_old, sensor_elimination_t *elimination_data){
 
     float32_t counter = 0;
 #if NUM_IMU != 0
     /* Reset SI data */
-    SI_data->accel.acc_x = 0;
-    SI_data->accel.acc_y = 0;
-    SI_data->accel.acc_z = 0;
-    SI_data->gyro.gyro_x = 0;
-    SI_data->gyro.gyro_y = 0;
-    SI_data->gyro.gyro_z = 0;
+    SI_data->accel.x = 0;
+    SI_data->accel.y = 0;
+    SI_data->accel.z = 0;
+    SI_data->gyro.x = 0;
+    SI_data->gyro.y = 0;
+    SI_data->gyro.z = 0;
 
-    /* Sum up all non-eliminated IMU's and transform to SI */
+    /* Sum up all non-eliminated IMUs and transform to SI */
     for(int i = 0; i < NUM_IMU; i++){
         if(elimination_data->faulty_imu[i] == 0){
             counter++;
-            SI_data->accel.acc_x += (float32_t)global_imu[i].acc_x * acc_info[i].conversion_to_SI;
-            SI_data->accel.acc_y += (float32_t)global_imu[i].acc_y * acc_info[i].conversion_to_SI;
-            SI_data->accel.acc_z += (float32_t)global_imu[i].acc_z * acc_info[i].conversion_to_SI;
-            SI_data->gyro.gyro_x += (float32_t)global_imu[i].gyro_x * gyro_info[i].conversion_to_SI;
-            SI_data->gyro.gyro_y += (float32_t)global_imu[i].gyro_y * gyro_info[i].conversion_to_SI;
-            SI_data->gyro.gyro_z += (float32_t)global_imu[i].gyro_z * gyro_info[i].conversion_to_SI;
+            SI_data->accel.x += (float32_t)global_imu[i].acc_x * acc_info[i].conversion_to_SI;
+            SI_data->accel.y += (float32_t)global_imu[i].acc_y * acc_info[i].conversion_to_SI;
+            SI_data->accel.z += (float32_t)global_imu[i].acc_z * acc_info[i].conversion_to_SI;
+            SI_data->gyro.x += (float32_t)global_imu[i].gyro_x * gyro_info[i].conversion_to_SI;
+            SI_data->gyro.y += (float32_t)global_imu[i].gyro_y * gyro_info[i].conversion_to_SI;
+            SI_data->gyro.z += (float32_t)global_imu[i].gyro_z * gyro_info[i].conversion_to_SI;
         }
     }
 
-    /* If all IMU's have been eliminated use high G accel */
-    if(counter == 0){
+
 #if NUM_ACCELEROMETER != 0
+    /* If all IMUs have been eliminated use high G accel */
+    if(counter == 0){
         for(int i = 0; i < NUM_ACCELEROMETER; i++){
             if(elimination_data->faulty_acc[i] == 0){
                 counter++;
-                SI_data->accel.acc_x += (float32_t)global_imu[i].acc_x * acc_info[NUM_IMU + i].conversion_to_SI;
-                SI_data->accel.acc_y += (float32_t)global_imu[i].acc_y * acc_info[NUM_IMU + i].conversion_to_SI;
-                SI_data->accel.acc_z += (float32_t)global_imu[i].acc_z * acc_info[NUM_IMU + i].conversion_to_SI;
+                SI_data->accel.x += (float32_t)global_imu[i].acc_x * acc_info[NUM_IMU + i].conversion_to_SI;
+                SI_data->accel.y += (float32_t)global_imu[i].acc_y * acc_info[NUM_IMU + i].conversion_to_SI;
+                SI_data->accel.z += (float32_t)global_imu[i].acc_z * acc_info[NUM_IMU + i].conversion_to_SI;
             }
         }
-#endif
     }
+#endif
 
     /* average for SI data */
     if(counter != 0) {
-        SI_data->accel.acc_x /= counter;
-        SI_data->accel.acc_y /= counter;
-        SI_data->accel.acc_z /= counter;
-        SI_data->gyro.gyro_x /= counter;
-        SI_data->gyro.gyro_y /= counter;
-        SI_data->gyro.gyro_z /= counter;
+        SI_data->accel.x /= counter;
+        SI_data->accel.y /= counter;
+        SI_data->accel.z /= counter;
+        SI_data->gyro.x /= counter;
+        SI_data->gyro.y /= counter;
+        SI_data->gyro.z /= counter;
         clear_error(CATS_ERR_FILTER_ACC);
     }
     else{
+        SI_data->accel = SI_data_old->accel;
+        SI_data->gyro = SI_data_old->gyro;
         add_error(CATS_ERR_FILTER_ACC);
     }
 
@@ -145,18 +148,19 @@ static void avg_and_to_SI(SI_data_t *SI_data, sensor_elimination_t *elimination_
 
 #if NUM_BARO != 0
     counter = 0;
-    SI_data->pressure.pressure = 0;
+    SI_data->pressure.v = 0;
     for(int i = 0; i < NUM_BARO; i++){
         if(elimination_data->faulty_baro[i] == 0){
             counter++;
-            SI_data->pressure.pressure += (float32_t)global_baro[i].pressure * baro_info[i].conversion_to_SI;
+            SI_data->pressure.v += (float32_t)global_baro[i].pressure * baro_info[i].conversion_to_SI;
         }
     }
     if(counter != 0) {
-        SI_data->pressure.pressure /= counter;
+        SI_data->pressure.v /= counter;
         clear_error(CATS_ERR_FILTER_HEIGHT);
     }
     else{
+        SI_data->pressure = SI_data_old->pressure;
         add_error(CATS_ERR_FILTER_HEIGHT);
     }
 #endif
@@ -165,21 +169,25 @@ static void avg_and_to_SI(SI_data_t *SI_data, sensor_elimination_t *elimination_
 
 #if NUM_MAGNETO != 0
     counter = 0;
-    SI_data->mag.mag_x = 0;
-    SI_data->mag.mag_y = 0;
-    SI_data->mag.mag_z = 0;
+    SI_data->mag.x = 0;
+    SI_data->mag.y = 0;
+    SI_data->mag.z = 0;
     for(int i = 0; i < NUM_MAGNETO; i++){
         if(elimination_data->faulty_mag[i] == 0){
             counter++;
-            SI_data->mag.mag_x += (float32_t)global_magneto[i].magneto_x * mag_info[i].conversion_to_SI;
-            SI_data->mag.mag_y += (float32_t)global_magneto[i].magneto_y * mag_info[i].conversion_to_SI;
-            SI_data->mag.mag_z += (float32_t)global_magneto[i].magneto_z * mag_info[i].conversion_to_SI;
+            SI_data->mag.x += (float32_t)global_magneto[i].magneto_x * mag_info[i].conversion_to_SI;
+            SI_data->mag.y += (float32_t)global_magneto[i].magneto_y * mag_info[i].conversion_to_SI;
+            SI_data->mag.z += (float32_t)global_magneto[i].magneto_z * mag_info[i].conversion_to_SI;
         }
     }
     if(counter != 0){
-        SI_data->mag.mag_x /= counter;
-        SI_data->mag.mag_y /= counter;
-        SI_data->mag.mag_z /= counter;
+        SI_data->mag.x /= counter;
+        SI_data->mag.y /= counter;
+        SI_data->mag.z /= counter;
+    }
+    else{
+        /* Todo: Add error */
+        SI_data->mag = SI_data_old->mag;
     }
 #endif
 
@@ -199,8 +207,8 @@ static void median_filter(median_filter_t *filter_data, state_estimation_input_t
     state_data->acceleration_z = median(filter_data->acc, MEDIAN_FILTER_SIZE);
     state_data->height_AGL = median(filter_data->height_AGL, MEDIAN_FILTER_SIZE);
 
-
 }
+
 
 static void transform_data(float32_t pressure_0, state_estimation_input_t *state_data, SI_data_t *SI_data,
                            calibration_data_t *calibration) {
@@ -209,20 +217,20 @@ static void transform_data(float32_t pressure_0, state_estimation_input_t *state
     switch (calibration->axis) {
         case 0:
             /* Choose X Axis */
-            state_data->acceleration_z = SI_data->accel.acc_x / calibration->angle - GRAVITY;
+            state_data->acceleration_z = SI_data->accel.x / calibration->angle - GRAVITY;
             break;
         case 1:
             /* Choose Y Axis */
-            state_data->acceleration_z = SI_data->accel.acc_y / calibration->angle - GRAVITY;
+            state_data->acceleration_z = SI_data->accel.y / calibration->angle - GRAVITY;
             break;
         case 2:
             /* Choose Z Axis */
-            state_data->acceleration_z = SI_data->accel.acc_z / calibration->angle - GRAVITY;
+            state_data->acceleration_z = SI_data->accel.z / calibration->angle - GRAVITY;
             break;
         default:
             break;
     }
-    state_data->height_AGL = calculate_height(pressure_0, SI_data->pressure.pressure, 25.0f);
+    state_data->height_AGL = calculate_height(pressure_0, SI_data->pressure.v, 25.0f);
 }
 
 inline static float calculate_height(float32_t pressure_initial, float32_t pressure, float32_t temperature_0) {

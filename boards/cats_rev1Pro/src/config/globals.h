@@ -79,7 +79,6 @@ extern state_estimation_input_t global_estimation_input;
 extern SI_data_t global_SI_data;
 extern flight_fsm_t global_flight_state;
 extern drop_test_fsm_t global_drop_test_state;
-extern sensor_elimination_t global_elimination_data;
 extern estimation_output_t global_estimation_data;
 extern dt_telemetry_trigger_t dt_telemetry_trigger;
 

@@ -61,7 +61,6 @@ void task_sensor_read(void *argument) {
   int16_t gyroscope[3] = {0};    /* 0 = x, 1 = y, 2 = z */
   int16_t acceleration[3] = {0}; /* 0 = x, 1 = y, 2 = z */
   int16_t temperature_imu = {0};
-  accel_data_t accel_data = {0};
 
   /* Initialize BARO data variables */
     uint32_t stage = READ_BARO_TEMPERATURE;
@@ -71,15 +70,15 @@ void task_sensor_read(void *argument) {
     osDelay(5);
 
   /* initialize MAGNETO data variables */
-  magneto_data_t magneto_data = {0};
-  float data[3] = {0};
+  float mag_data[3] = {0};
 
   /* Infinite loop */
   tick_count = osKernelGetTickCount();
+  /* This task is sampled with 2 times the control sampling frequency to maximize speed of the barometer. In one timestep the Baro pressure is read out and then the Baro Temperature. The other sensors are only read out one in two times. */
+
   tick_update = osKernelGetTickFreq() / (2 * CONTROL_SAMPLING_FREQ);
 
   while (1) {
-    tick_count += tick_update;
 
 
       // Readout the baro register
@@ -94,43 +93,37 @@ void task_sensor_read(void *argument) {
           stage = READ_BARO_TEMPERATURE;
 
           get_temp_pres(temperature_baro, pressure);
-          // log_info("P1: %ld; P2: %ld; P3: %ld; T1: %ld; T2: %ld; T3: %ld", pressure[0], pressure[1], pressure[2],
-          // temperature[0], temperature[1], temperature[2]);
 
+
+          /* Read and Save Barometric Data */
           for (int i = 0; i < NUM_BARO; i++) {
               global_baro[i].pressure = pressure[i];
               global_baro[i].temperature = temperature_baro[i];
               global_baro[i].ts = tick_count;
-
               record(add_id_to_record_type(BARO, i), &(global_baro[i]));
           }
 
 
           /* Read and Save Magnetometer Data */
-          mmc5983ma_read_calibrated(&MAG, data);
-          magneto_data.magneto_x = data[0];
-          magneto_data.magneto_y = data[1];
-          magneto_data.magneto_z = data[2];
-          magneto_data.ts = osKernelGetTickCount();
-          // log_info("Magneto %ld: RAW Mx: %ld, My:%ld, Mz:%ld", 1, (int32_t)((float)data[0] * 1000),
-          //         (int32_t)((float)data[1] * 1000), (int32_t)((float)data[2] * 1000));
+          for (int i = 0; i < NUM_MAGNETO; i++) {
+              mmc5983ma_read_calibrated(&MAG, mag_data);
+              memcpy(&(global_magneto[i].magneto_x), &mag_data, 3 * sizeof(float));
+              global_magneto[i].ts = tick_count;
+              record(add_id_to_record_type(MAGNETO, i), &(global_magneto[i]));
+          }
 
 
-          global_magneto[0] = magneto_data;
-          record(add_id_to_record_type(MAGNETO, 0), &(global_magneto[0]));
+          /* Read and Save High-G ACC Data */
+          for(int i = 0; i < NUM_ACCELEROMETER; i++){
+              int8_t tmp_data[3];
+              h3lis100dl_read_raw(&ACCEL, tmp_data);
+              memcpy(&(global_accel[i].acc_x), &tmp_data, 3 * sizeof(int8_t));
+              global_accel[i].ts = tick_count;
+              record(add_id_to_record_type(ACCELEROMETER, i), &(global_accel[i]));
+          }
 
-          /* Read and Save High-G IMU Data */
-          int8_t tmp_data[3];
-          h3lis100dl_read_raw(&ACCEL, tmp_data);
-          accel_data.acc_x = tmp_data[0];
-          accel_data.acc_y = tmp_data[1];
-          accel_data.acc_z = tmp_data[2];
-          //memcpy(&(global_accel[0].acc_x), &(accel_data[0].acc_x), 3 * sizeof(int8_t));
-          global_accel[0].ts = tick_count;
-          record(add_id_to_record_type(ACCELEROMETER, 0), &(accel_data));
 
-          /* TODO: The speed of copying looks to be the same, code size reduced by 16B
-           * with memcpy vs. assignment with -0g */
+          /* Read and Save IMU Data */
           for (int i = 0; i < NUM_IMU; i++) {
               read_imu(gyroscope, acceleration, &temperature_imu, i);
               memcpy(&(global_imu[i].acc_x), &acceleration, 3 * sizeof(int16_t));
@@ -139,11 +132,9 @@ void task_sensor_read(void *argument) {
               record(add_id_to_record_type(IMU, i), &(global_imu[i]));
           }
 
-
       }
 
-
-
+    tick_count += tick_update;
     osDelayUntil(tick_count);
   }
 }

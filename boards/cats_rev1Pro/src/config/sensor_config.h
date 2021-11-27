@@ -28,7 +28,8 @@
 #define NUM_BARO          3
 
 typedef enum {
-    ICM20601_ID_ACC = 0,
+    SENS_TYPE_INVALID = 0,
+    ICM20601_ID_ACC,
     ICM20601_ID_GYRO,
     MS5607_ID,
     MMC5983MA_ID,

@@ -20,5 +20,5 @@
 
 #include "util/types.h"
 
-void calibrate_imu(accel_t *accel_data, calibration_data_t *);
+void calibrate_imu(vec_t *accel_data, calibration_data_t *);
 void calibrate_magneto(magneto_data_t *magneto_data, magneto_calibration_data_t *calibration_data);

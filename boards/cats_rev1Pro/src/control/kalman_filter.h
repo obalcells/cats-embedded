@@ -35,6 +35,8 @@ void kalman_prediction(kalman_filter_t *filter);
 
 void reset_kalman(kalman_filter_t *filter);
 
+void soft_reset_kalman(kalman_filter_t *filter);
+
 void kalman_update(kalman_filter_t *filter);
 
 void kalman_step(kalman_filter_t *filter, flight_fsm_e flight_state);

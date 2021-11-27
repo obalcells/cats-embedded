@@ -60,16 +60,21 @@
       .priority = (osPriority_t)osPriorityNormal, \
   };
 
+/* Todo: Check with Trace if can be reduced */
 SET_TASK_PARAMS(task_sensor_read, 512)
+/* Todo: Check with Trace if can be reduced */
 SET_TASK_PARAMS(task_preprocessing, 512)
 
 // SET_TASK_PARAMS(task_receiver, 256)
+/* Todo: Check with Trace if can be reduced */
 SET_TASK_PARAMS(task_state_est, 512)
 SET_TASK_PARAMS(task_health_monitor, 256)
 
+/* Todo: Check with Trace if can be reduced */
 SET_TASK_PARAMS(task_flight_fsm, 512)
 // SET_TASK_PARAMS(task_drop_test_fsm, 512)
 SET_TASK_PARAMS(task_peripherals, 256)
+/* Todo: Check with Trace if can be reduced */
 SET_TASK_PARAMS(task_recorder, 1592)
 SET_TASK_PARAMS(task_usb_communicator, 512)
 

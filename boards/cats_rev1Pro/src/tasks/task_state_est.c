@@ -75,8 +75,14 @@ _Noreturn void task_state_est(__attribute__((unused)) void *argument) {
       if ((new_fsm_enum == READY) && (new_fsm_enum != old_fsm_enum)) {
           reset_kalman(&filter);
       }
+      /* Soft reset kalman filter when we go from Ready to thrusting */
+      if((new_fsm_enum == THRUSTING_1) && (new_fsm_enum != old_fsm_enum)){
+          soft_reset_kalman(&filter);
+      }
 
     /* Write measurement data into the filter struct */
+    /* After apogee we assume that the linear acceleration is zero. This assumption is true if the parachute has been ejected.
+     * If this assumption is not done, the linear acceleration will be bad because of movement of the rocket due to parachute forces. */
     if(new_fsm_enum < APOGEE){
         filter.measured_acceleration = global_estimation_input.acceleration_z;
     }
@@ -93,14 +99,12 @@ _Noreturn void task_state_est(__attribute__((unused)) void *argument) {
       global_estimation_data.velocity = filter.x_bar_data[1];
       global_estimation_data.acceleration = filter.measured_acceleration + filter.x_bar_data[2];
 
-      uint32_t ts = osKernelGetTickCount();
-
       /* Do Orientation Kalman */
 #ifdef USE_ORIENTATION_FILTER
       read_sensor_data(&global_magneto[0], &global_imu[0], &orientation_filter);
       orientation_filter_step(&orientation_filter);
       orientation_info_t orientation_info;
-      orientation_info.ts = ts;
+      orientation_info.ts = osKernelGetTickCount();
       /* DO ORIENTATION Filter */
       /*
       log_trace("KF: q0: %ld; q1: %ld; q2: %ld; q3: %ld", (int32_t)(orientation_filter.estimate_data[0] * 1000),
@@ -124,7 +128,7 @@ _Noreturn void task_state_est(__attribute__((unused)) void *argument) {
 
 
     /* Log KF outputs */
-    flight_info_t flight_info = {.ts = ts,
+    flight_info_t flight_info = {.ts = osKernelGetTickCount(),
                                  .height = filter.x_bar_data[0],
                                  .velocity = filter.x_bar_data[1],
                                  .acceleration = filter.measured_acceleration + filter.x_bar_data[2]};
@@ -133,9 +137,9 @@ _Noreturn void task_state_est(__attribute__((unused)) void *argument) {
     }
     record(FLIGHT_INFO, &flight_info);
 
-      log_info("H: %ld; V: %ld; A: %ld; O: %ld", (int32_t)((float)filter.x_bar.pData[0] * 1000),
-               (int32_t)((float)filter.x_bar.pData[1] * 1000), (int32_t)(filtered_data_info.filtered_acceleration * 1000),
-               (int32_t)((float)filter.x_bar.pData[2] * 1000));
+      //log_info("H: %ld; V: %ld; A: %ld; O: %ld", (int32_t)((float)filter.x_bar.pData[0] * 1000),
+      //         (int32_t)((float)filter.x_bar.pData[1] * 1000), (int32_t)(filtered_data_info.filtered_acceleration * 1000),
+      //         (int32_t)((float)filter.x_bar.pData[2] * 1000));
 
 
       /* reset old fsm enum */

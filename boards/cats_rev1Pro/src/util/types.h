@@ -72,26 +72,19 @@ typedef struct {
 /* Sensor Data */
 
 typedef struct {
-    float32_t acc_x, acc_y, acc_z;          // m/s^2
-} accel_t;
+    float32_t x, y, z;          // m/s^2
+} vec_t;
 
 typedef struct {
-    float32_t gyro_x, gyro_y, gyro_z;       // dps
-} gyro_t;
+    float32_t v;                     // hPa
+} scalar_t;
 
+/* Todo: #if on SI data */
 typedef struct {
-    float32_t mag_x, mag_y, mag_z;          //mG
-} mag_t;
-
-typedef struct {
-    float32_t pressure;                     // hPa
-} pressure_t;
-
-typedef struct {
-    accel_t accel;
-    gyro_t gyro;
-    mag_t mag;
-    pressure_t pressure;
+    vec_t accel;          // m/s^2
+    vec_t gyro;            // dps
+    vec_t mag;              //mG
+    scalar_t pressure;    // hPa
 } SI_data_t;
 
 /* Elimination Data */
@@ -154,8 +147,8 @@ typedef enum {
 
 typedef struct {
   flight_fsm_e flight_state;
-  accel_t old_acc_data;
-  gyro_t old_gyro_data;
+  vec_t old_acc_data;
+  vec_t old_gyro_data;
   float old_height;
   float angular_movement[3];
   uint32_t clock_memory;

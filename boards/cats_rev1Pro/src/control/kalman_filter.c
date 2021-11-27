@@ -125,8 +125,8 @@ void initialize_matrices(kalman_filter_t *const filter) {
 
 void reset_kalman(kalman_filter_t *filter) {
   log_debug("Resetting Kalman Filter...");
-  float32_t x_dash[3] = {0, 0.0f, 0};
-  float32_t P_dash[9] = {0.1f, 0, 0, 0, 0.1f, 0, 0, 0, 0.1f};
+  float32_t x_dash[3] = {0.0f, 10.0f, 0.0f};
+  float32_t P_dash[9] = {0.1f, 0.0f, 0.0f, 0.0f, 0.1f, 0.0f, 0.0f, 0.0f, 0.1f};
 
   memcpy(filter->x_bar_data, x_dash, sizeof(x_dash));
   memcpy(filter->x_bar_data, x_dash, sizeof(x_dash));
@@ -134,22 +134,10 @@ void reset_kalman(kalman_filter_t *filter) {
   memcpy(filter->P_bar_data, P_dash, sizeof(P_dash));
 }
 
-void thrust_reset_kalman(kalman_filter_t *filter) {
+void soft_reset_kalman(kalman_filter_t *filter) {
     log_debug("Resetting Kalman Filter...");
-    float32_t x_dash[3] = {0, 0.0f, 0};
-    float32_t P_dash[9] = {0};
-    memcpy(P_dash, filter->P_bar_data, sizeof(filter->P_bar_data));
-    P_dash[0] = 0.1f;
-    P_dash[1] = 0.0f;
-    P_dash[2] = 0.0f;
-    P_dash[3] = 0.0f;
-    P_dash[4] = 0.1f;
-    P_dash[5] = 0.0f;
-    P_dash[6] = 0.0f;
-    P_dash[7] = 0.0f;
+    float32_t P_dash[9] = {0.1f, 0.0f, 0.0f, 0.0f, 0.1f, 0.0f, 0.0f, 0.0f, 0.1f};
 
-    memcpy(filter->x_hat_data, x_dash, sizeof(x_dash));
-    memcpy(filter->x_bar_data, x_dash, sizeof(x_dash));
     memcpy(filter->P_hat_data, P_dash, sizeof(P_dash));
     memcpy(filter->P_bar_data, P_dash, sizeof(P_dash));
 }
@@ -240,6 +228,7 @@ void kalman_update(kalman_filter_t *filter) {
 }
 
 float32_t R_interpolation(float32_t velocity) {
+    /* Todo: Can be optimized */
     float32_t lower_bound = 20;
     float32_t upper_bound = 100;
     float32_t f_lower_bound = 0.1f;
@@ -274,7 +263,6 @@ void kalman_step(kalman_filter_t *filter, flight_fsm_e flight_state) {
             break;
         case THRUSTING_1:
             filter->R = STD_NOISE_BARO;
-            thrust_reset_kalman(filter);
             break;
         case COASTING:
             filter->R = STD_NOISE_BARO*R_interpolation(filter->x_bar_data[1]);

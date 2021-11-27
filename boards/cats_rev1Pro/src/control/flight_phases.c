@@ -19,18 +19,19 @@
 #include "config/cats_config.h"
 #include "control/flight_phases.h"
 #include "tasks/task_peripherals.h"
+#include "util/log.h"
 
 #include <stdlib.h>
 
-static void check_moving_phase(flight_fsm_t *fsm_state, accel_t *acc_data, gyro_t *gyro_data);
-static void check_idle_phase(flight_fsm_t *fsm_state, accel_t *acc_data, gyro_t *gyro_data, control_settings_t *settings);
+static void check_moving_phase(flight_fsm_t *fsm_state, vec_t *acc_data, vec_t *gyro_data);
+static void check_ready_phase(flight_fsm_t *fsm_state, vec_t *acc_data, vec_t *gyro_data, control_settings_t *settings);
 static void check_thrusting_1_phase(flight_fsm_t *fsm_state, estimation_output_t *state_data);
 static void check_coasting_phase(flight_fsm_t *fsm_state, estimation_output_t *state_data);
 static void check_apogee_phase(flight_fsm_t *fsm_state, estimation_output_t *state_data);
 static void check_drogue_phase(flight_fsm_t *fsm_state, estimation_output_t *state_data);
 static void check_main_phase(flight_fsm_t *fsm_state, estimation_output_t *state_data);
 
-void check_flight_phase(flight_fsm_t *fsm_state, accel_t *acc_data, gyro_t *gyro_data, estimation_output_t *state_data,
+void check_flight_phase(flight_fsm_t *fsm_state, vec_t *acc_data, vec_t *gyro_data, estimation_output_t *state_data,
                         control_settings_t *settings) {
   /* Save old FSM state */
   flight_fsm_t old_fsm_state = *fsm_state;
@@ -40,7 +41,7 @@ void check_flight_phase(flight_fsm_t *fsm_state, accel_t *acc_data, gyro_t *gyro
       check_moving_phase(fsm_state, acc_data, gyro_data);
       break;
     case READY:
-      check_idle_phase(fsm_state, acc_data, gyro_data, settings);
+      check_ready_phase(fsm_state, acc_data, gyro_data, settings);
       break;
     case THRUSTING_1:
       check_thrusting_1_phase(fsm_state, state_data);
@@ -75,14 +76,14 @@ void check_flight_phase(flight_fsm_t *fsm_state, accel_t *acc_data, gyro_t *gyro
   }
 }
 
-static void check_moving_phase(flight_fsm_t *fsm_state, accel_t *acc_data, gyro_t *gyro_data) {
+static void check_moving_phase(flight_fsm_t *fsm_state, vec_t *acc_data, vec_t *gyro_data) {
   /* Check if the IMU moved between two timesteps */
-  if ((fabsf(fsm_state->old_acc_data.acc_x - acc_data->acc_x) < ALLOWED_ACC_ERROR) &&
-      (fabsf(fsm_state->old_acc_data.acc_y - acc_data->acc_y) < ALLOWED_ACC_ERROR) &&
-      (fabsf(fsm_state->old_acc_data.acc_z - acc_data->acc_z) < ALLOWED_ACC_ERROR) &&
-      (fabsf(fsm_state->old_gyro_data.gyro_x - gyro_data->gyro_x) < ALLOWED_GYRO_ERROR) &&
-      (fabsf(fsm_state->old_gyro_data.gyro_y - gyro_data->gyro_y) < ALLOWED_GYRO_ERROR) &&
-      (fabsf(fsm_state->old_gyro_data.gyro_z - gyro_data->gyro_z) < ALLOWED_GYRO_ERROR)) {
+  if ((fabsf(fsm_state->old_acc_data.x - acc_data->x) < ALLOWED_ACC_ERROR) &&
+      (fabsf(fsm_state->old_acc_data.y - acc_data->y) < ALLOWED_ACC_ERROR) &&
+      (fabsf(fsm_state->old_acc_data.z - acc_data->z) < ALLOWED_ACC_ERROR) &&
+      (fabsf(fsm_state->old_gyro_data.x - gyro_data->x) < ALLOWED_GYRO_ERROR) &&
+      (fabsf(fsm_state->old_gyro_data.y - gyro_data->y) < ALLOWED_GYRO_ERROR) &&
+      (fabsf(fsm_state->old_gyro_data.z - gyro_data->z) < ALLOWED_GYRO_ERROR)) {
     fsm_state->memory[1]++;
   } else {
     fsm_state->memory[1] = 0;
@@ -107,9 +108,9 @@ static void check_moving_phase(flight_fsm_t *fsm_state, accel_t *acc_data, gyro_
   /* Check if we move from MOVING To THRUSTING_1 */
   /* To Make sure that the timers start any acceleration direction is accepted
    * here */
-  float32_t accel_x = acc_data->acc_x * acc_data->acc_x;
-  float32_t accel_y = acc_data->acc_y * acc_data->acc_y;
-  float32_t accel_z = acc_data->acc_z * acc_data->acc_z;
+  float32_t accel_x = acc_data->x * acc_data->x;
+  float32_t accel_y = acc_data->y * acc_data->y;
+  float32_t accel_z = acc_data->z * acc_data->z;
   float32_t acceleration = accel_x + accel_y + accel_z;
 
   if (acceleration > (MOV_LIFTOFF_THRESHOLD * MOV_LIFTOFF_THRESHOLD)) {
@@ -130,16 +131,16 @@ static void check_moving_phase(flight_fsm_t *fsm_state, accel_t *acc_data, gyro_
   }
 }
 
-static void check_idle_phase(flight_fsm_t *fsm_state, accel_t *acc_data, gyro_t *gyro_data, control_settings_t *settings) {
+static void check_ready_phase(flight_fsm_t *fsm_state, vec_t *acc_data, vec_t *gyro_data, control_settings_t *settings) {
   /* Check if we move from READY Back to MOVING */
 
   /* Check if the IMU moved between two timesteps */
-  if ((fabsf(fsm_state->old_acc_data.acc_x - acc_data->acc_x) > ALLOWED_ACC_ERROR) ||
-      (fabsf(fsm_state->old_acc_data.acc_y - acc_data->acc_y) > ALLOWED_ACC_ERROR) ||
-      (fabsf(fsm_state->old_acc_data.acc_z - acc_data->acc_z) > ALLOWED_ACC_ERROR) ||
-      (fabsf(fsm_state->old_gyro_data.gyro_x - gyro_data->gyro_x) > ALLOWED_GYRO_ERROR) ||
-      (fabsf(fsm_state->old_gyro_data.gyro_y - gyro_data->gyro_y) > ALLOWED_GYRO_ERROR) ||
-      (fabsf(fsm_state->old_gyro_data.gyro_z - gyro_data->gyro_z) > ALLOWED_GYRO_ERROR)) {
+  if ((fabsf(fsm_state->old_acc_data.x - acc_data->x) > ALLOWED_ACC_ERROR) ||
+      (fabsf(fsm_state->old_acc_data.y - acc_data->y) > ALLOWED_ACC_ERROR) ||
+      (fabsf(fsm_state->old_acc_data.z - acc_data->z) > ALLOWED_ACC_ERROR) ||
+      (fabsf(fsm_state->old_gyro_data.x - gyro_data->x) > ALLOWED_GYRO_ERROR) ||
+      (fabsf(fsm_state->old_gyro_data.y - gyro_data->y) > ALLOWED_GYRO_ERROR) ||
+      (fabsf(fsm_state->old_gyro_data.z - gyro_data->z) > ALLOWED_GYRO_ERROR)) {
     fsm_state->memory[1]++;
   }
 
@@ -172,18 +173,24 @@ static void check_idle_phase(flight_fsm_t *fsm_state, accel_t *acc_data, gyro_t 
     fsm_state->angular_movement[2] = 0;
   }
 
+  log_info("x: %ld; y: %ld; z: %ld", (int32_t)(gyro_data->x*1000), (int32_t)(gyro_data->y*1000), (int32_t)(gyro_data->z*1000));
+
   /* Integrate Gyro Movement */
-  if (gyro_data->gyro_x > GYRO_SENSITIVITY) {
-    fsm_state->angular_movement[0] += gyro_data->gyro_x / SAMPLING_FREQUENCY;
+  if (gyro_data->x > GYRO_SENSITIVITY) {
+    fsm_state->angular_movement[0] += gyro_data->x / SAMPLING_FREQUENCY;
   }
 
-  if (gyro_data->gyro_y > GYRO_SENSITIVITY) {
-    fsm_state->angular_movement[1] += gyro_data->gyro_y / SAMPLING_FREQUENCY;
+  if (gyro_data->y > GYRO_SENSITIVITY) {
+    fsm_state->angular_movement[1] += gyro_data->y / SAMPLING_FREQUENCY;
   }
 
-  if (gyro_data->gyro_z > GYRO_SENSITIVITY) {
-    fsm_state->angular_movement[2] += gyro_data->gyro_z / SAMPLING_FREQUENCY;
+  if (gyro_data->z > GYRO_SENSITIVITY) {
+    fsm_state->angular_movement[2] += gyro_data->z / SAMPLING_FREQUENCY;
   }
+
+  //log_info("Integration: %ld", (int32_t)(fabsf(fsm_state->angular_movement[0]) + fabsf(fsm_state->angular_movement[1]) +
+  //   fabsf(fsm_state->angular_movement[2])));
+
 
   if ((fabsf(fsm_state->angular_movement[0]) + fabsf(fsm_state->angular_movement[1]) +
        fabsf(fsm_state->angular_movement[2])) > ANGLE_MOVE_MAX) {
@@ -199,9 +206,9 @@ static void check_idle_phase(flight_fsm_t *fsm_state, accel_t *acc_data, gyro_t 
 
   /* Check if we move from READY To THRUSTING_1 */
   /* The absolut value of the acceleration is used here to make sure that we detect liftoff */
-  float32_t accel_x = acc_data->acc_x * acc_data->acc_x;
-  float32_t accel_y = acc_data->acc_y * acc_data->acc_y;
-  float32_t accel_z = acc_data->acc_z * acc_data->acc_z;
+  float32_t accel_x = acc_data->x * acc_data->x;
+  float32_t accel_y = acc_data->y * acc_data->y;
+  float32_t accel_z = acc_data->z * acc_data->z;
   float32_t acceleration = accel_x + accel_y + accel_z;
 
   if (acceleration > ((float)settings->liftoff_acc_threshold * (float)settings->liftoff_acc_threshold)) {
