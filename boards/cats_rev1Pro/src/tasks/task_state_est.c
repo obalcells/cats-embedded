@@ -75,6 +75,7 @@ _Noreturn void task_state_est(__attribute__((unused)) void *argument) {
       if ((new_fsm_enum == READY) && (new_fsm_enum != old_fsm_enum)) {
           reset_kalman(&filter);
       }
+
       /* Soft reset kalman filter when we go from Ready to thrusting */
       if((new_fsm_enum == THRUSTING_1) && (new_fsm_enum != old_fsm_enum)){
           soft_reset_kalman(&filter);

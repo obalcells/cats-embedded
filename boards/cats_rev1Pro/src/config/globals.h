@@ -75,6 +75,7 @@ extern baro_data_t global_baro[NUM_BARO];
 extern imu_data_t global_imu[NUM_IMU];
 extern accel_data_t global_accel[NUM_ACCELEROMETER];
 extern magneto_data_t global_magneto[NUM_MAGNETO];
+
 extern state_estimation_input_t global_estimation_input;
 extern SI_data_t global_SI_data;
 extern flight_fsm_t global_flight_state;

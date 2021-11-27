@@ -23,7 +23,7 @@
 
 /* maximum times a value is allowed to be the same value before we assume that
  * it is faulty */
-#define MAX_NUM_SAME_VALUE 1000     // num iterations
+#define MAX_NUM_SAME_VALUE 7     // num iterations
 
 
 

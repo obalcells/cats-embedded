@@ -28,8 +28,8 @@ void task_preprocessing(void *argument) {
     uint32_t tick_count, tick_update;
 
     /* Create data structs */
-    SI_data_t SI_data = {0};
-    SI_data_t SI_data_old = {0};
+    static SI_data_t SI_data = {0};
+    static SI_data_t SI_data_old = {0};
 #ifdef USE_MEDIAN_FILTER
     median_filter_t filter_data = {0};
 #endif
@@ -57,7 +57,6 @@ void task_preprocessing(void *argument) {
         check_sensors(&sensor_elimination);
 
         /* average and construct SI Data */
-        /* if a zero is inside the SI_data, this means that all sensors corresponding to that unit were eliminated. */
         avg_and_to_SI(&SI_data, &SI_data_old, &sensor_elimination);
 
         /* Global SI data is only used in the fsm task */
@@ -79,6 +78,7 @@ void task_preprocessing(void *argument) {
 
         /* reset old fsm enum */
         old_fsm_enum = new_fsm_enum;
+        /* Todo: Memcopy */
         SI_data_old = SI_data;
 
         /* write input data into global struct */
@@ -91,7 +91,7 @@ void task_preprocessing(void *argument) {
 static void avg_and_to_SI(SI_data_t *SI_data, SI_data_t *SI_data_old, sensor_elimination_t *elimination_data){
 
     float32_t counter = 0;
-#if NUM_IMU != 0
+#if NUM_IMU > 0
     /* Reset SI data */
     SI_data->accel.x = 0;
     SI_data->accel.y = 0;
@@ -114,7 +114,7 @@ static void avg_and_to_SI(SI_data_t *SI_data, SI_data_t *SI_data_old, sensor_eli
     }
 
 
-#if NUM_ACCELEROMETER != 0
+#if NUM_ACCELEROMETER > 0
     /* If all IMUs have been eliminated use high G accel */
     if(counter == 0){
         for(int i = 0; i < NUM_ACCELEROMETER; i++){
@@ -129,7 +129,7 @@ static void avg_and_to_SI(SI_data_t *SI_data, SI_data_t *SI_data_old, sensor_eli
 #endif
 
     /* average for SI data */
-    if(counter != 0) {
+    if(counter > 0) {
         SI_data->accel.x /= counter;
         SI_data->accel.y /= counter;
         SI_data->accel.z /= counter;
@@ -146,7 +146,7 @@ static void avg_and_to_SI(SI_data_t *SI_data, SI_data_t *SI_data_old, sensor_eli
 
 #endif
 
-#if NUM_BARO != 0
+#if NUM_BARO > 0
     counter = 0;
     SI_data->pressure.v = 0;
     for(int i = 0; i < NUM_BARO; i++){
@@ -155,7 +155,7 @@ static void avg_and_to_SI(SI_data_t *SI_data, SI_data_t *SI_data_old, sensor_eli
             SI_data->pressure.v += (float32_t)global_baro[i].pressure * baro_info[i].conversion_to_SI;
         }
     }
-    if(counter != 0) {
+    if(counter > 0) {
         SI_data->pressure.v /= counter;
         clear_error(CATS_ERR_FILTER_HEIGHT);
     }
@@ -167,7 +167,7 @@ static void avg_and_to_SI(SI_data_t *SI_data, SI_data_t *SI_data_old, sensor_eli
 
 
 
-#if NUM_MAGNETO != 0
+#if NUM_MAGNETO > 0
     counter = 0;
     SI_data->mag.x = 0;
     SI_data->mag.y = 0;
@@ -230,7 +230,7 @@ static void transform_data(float32_t pressure_0, state_estimation_input_t *state
         default:
             break;
     }
-    state_data->height_AGL = calculate_height(pressure_0, SI_data->pressure.v, 25.0f);
+    state_data->height_AGL = calculate_height(pressure_0, SI_data->pressure.v, 15.0f);
 }
 
 inline static float calculate_height(float32_t pressure_initial, float32_t pressure, float32_t temperature_0) {

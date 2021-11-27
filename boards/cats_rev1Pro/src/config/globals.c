@@ -120,6 +120,7 @@ baro_data_t global_baro[NUM_BARO] = {0};
 imu_data_t global_imu[NUM_IMU] = {0};
 accel_data_t global_accel[NUM_ACCELEROMETER] = {0};
 magneto_data_t global_magneto[NUM_MAGNETO] = {0};
+
 state_estimation_input_t global_estimation_input = {0};
 SI_data_t global_SI_data = {0};
 estimation_output_t global_estimation_data = {0};
